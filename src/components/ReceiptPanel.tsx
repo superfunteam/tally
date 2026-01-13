@@ -128,7 +128,7 @@ export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry, onUpdate
       <ReceiptDetailModal
         isOpen={selectedReceipt !== null}
         onClose={() => setSelectedReceipt(null)}
-        transaction={selectedReceipt?.receipt.transactions[selectedReceipt.transactionIndex] || null}
+        transaction={selectedReceipt ? selectedReceipt.receipt.transactions[selectedReceipt.transactionIndex] : null}
         previewUrl={selectedReceipt?.receipt.preview}
         onSave={handleSaveTransaction}
       />
