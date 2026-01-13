@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DropZone, Card, Button } from './ui';
 import type { StatementFile, ProcessingStatus } from '../types';
@@ -115,12 +116,29 @@ interface StatementCardProps {
 
 function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardProps) {
   const status = statusConfig[statement.status];
-  const isProcessing = ['uploading', 'analyzing', 'extracting'].includes(statement.status);
+  const isProcessing = ['pending', 'uploading', 'analyzing', 'extracting'].includes(statement.status);
+  const [elapsed, setElapsed] = useState(0);
+
+  // Timer for processing
+  useEffect(() => {
+    if (!isProcessing) {
+      setElapsed(0);
+      return;
+    }
+    const timer = setInterval(() => setElapsed((prev) => prev + 1), 1000);
+    return () => clearInterval(timer);
+  }, [isProcessing]);
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
   };
 
   return (
@@ -131,19 +149,56 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
       exit={{ opacity: 0, x: 20 }}
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
     >
-      <Card className="flex items-start gap-4">
+      <Card className="flex items-start gap-4 overflow-hidden relative">
+        {/* Animated processing background */}
+        {isProcessing && (
+          <>
+            <motion.div
+              className="absolute inset-0 opacity-10"
+              style={{
+                background: 'linear-gradient(90deg, transparent, var(--color-primary-600), transparent)',
+              }}
+              animate={{
+                x: ['-100%', '100%'],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: 'linear',
+              }}
+            />
+            <motion.div
+              className="absolute left-0 top-0 bottom-0 w-1"
+              style={{ backgroundColor: 'var(--color-primary-600)' }}
+              animate={{
+                opacity: [0.5, 1, 0.5],
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+              }}
+            />
+          </>
+        )}
+
         {/* File Icon */}
         <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: 'var(--bg-tertiary)' }}
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 relative z-10"
+          style={{ backgroundColor: isProcessing ? 'var(--color-primary-600)' : 'var(--bg-tertiary)' }}
         >
           {isProcessing ? (
             <motion.span
-              className="material-icons-outlined text-2xl text-slate-500"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="material-icons text-2xl text-white"
+              animate={{
+                rotateY: [0, 360],
+                scale: [1, 1.1, 1],
+              }}
+              transition={{
+                rotateY: { duration: 2, repeat: Infinity, ease: 'linear' },
+                scale: { duration: 1, repeat: Infinity },
+              }}
             >
-              sync
+              document_scanner
             </motion.span>
           ) : (
             <span
@@ -161,7 +216,7 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 relative z-10">
           <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{statement.name}</p>
 
           <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -176,14 +231,40 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
 
           {/* Status */}
           <div className="flex items-center gap-2 mt-2">
-            <span className={`material-icons-outlined text-lg ${status.color}`}>
-              {status.icon}
-            </span>
-            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {statement.status === 'complete'
-                ? `${statement.transactions.length} transactions found`
-                : status.label}
-            </span>
+            {isProcessing ? (
+              <>
+                <motion.span
+                  className="material-icons-outlined text-lg"
+                  style={{ color: 'var(--color-primary-600)' }}
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  {status.icon}
+                </motion.span>
+                <span className="text-sm font-medium" style={{ color: 'var(--color-primary-600)' }}>
+                  {status.label}
+                </span>
+                <motion.span
+                  className="text-xs font-mono px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'var(--color-primary-600)', color: 'white' }}
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  {formatTime(elapsed)}
+                </motion.span>
+              </>
+            ) : (
+              <>
+                <span className={`material-icons-outlined text-lg ${status.color}`}>
+                  {status.icon}
+                </span>
+                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  {statement.status === 'complete'
+                    ? `${statement.transactions.length} transactions found`
+                    : status.label}
+                </span>
+              </>
+            )}
           </div>
 
           {/* Error state */}
@@ -200,7 +281,7 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
         {/* Remove button */}
         <button
           onClick={onRemove}
-          className="p-2 transition-colors"
+          className="p-2 transition-colors relative z-10"
           style={{ color: 'var(--text-muted)' }}
         >
           <span className="material-icons-outlined text-xl">close</span>

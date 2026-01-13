@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { DropZone, Card, CameraButton, Button } from './ui';
+import { DropZone, Card, CameraButton, Button, ScanningOverlay } from './ui';
 import type { ReceiptImage, ProcessingStatus } from '../types';
 
 interface ReceiptPanelProps {
@@ -138,22 +138,15 @@ function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
           />
 
           {/* Status overlay */}
-          {receipt.status !== 'complete' && (
-            <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
-              {isProcessing ? (
-                <motion.span
-                  className={`material-icons-outlined text-3xl text-white`}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                >
-                  {status.icon}
-                </motion.span>
-              ) : (
-                <span className={`material-icons-outlined text-3xl ${status.color}`}>
-                  {status.icon}
-                </span>
-              )}
-              <span className="text-white text-sm mt-2 font-medium">{status.label}</span>
+          {receipt.status !== 'complete' && receipt.status !== 'error' && (
+            <ScanningOverlay status={receipt.status as 'pending' | 'uploading' | 'analyzing' | 'extracting'} />
+          )}
+
+          {/* Error overlay */}
+          {receipt.status === 'error' && (
+            <div className="absolute inset-0 bg-red-500/80 flex flex-col items-center justify-center">
+              <span className="material-icons-outlined text-4xl text-white">error</span>
+              <span className="text-white text-sm mt-2 font-medium">Error</span>
             </div>
           )}
 

@@ -8,3 +8,4 @@ export { ProgressRing } from './ProgressRing';
 export { Modal } from './Modal';
 export { ColorModePicker } from './ColorModePicker';
 export type { ColorMode } from './ColorModePicker';
+export { ScanningOverlay } from './ScanningOverlay';
