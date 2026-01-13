@@ -37,9 +37,9 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 bg-white">
-        <h2 className="text-xl font-bold text-slate-900">Statements</h2>
-        <p className="text-sm text-slate-500 mt-1">
+      <div className="p-4 border-b" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Statements</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
           {statements.length === 0
             ? 'Upload your bank statements'
             : `${statements.length} statement${statements.length !== 1 ? 's' : ''} · ${totalTransactions} transactions`}
@@ -126,13 +126,8 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
       <Card className="flex items-start gap-4">
         {/* PDF Icon */}
         <div
-          className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            statement.status === 'complete'
-              ? 'bg-green-100'
-              : statement.status === 'error'
-              ? 'bg-red-100'
-              : 'bg-slate-100'
-          }`}
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+          style={{ backgroundColor: 'var(--bg-tertiary)' }}
         >
           {isProcessing ? (
             <motion.span
@@ -159,9 +154,9 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
 
         {/* Info */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-slate-900 truncate">{statement.name}</p>
+          <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{statement.name}</p>
 
-          <div className="flex items-center gap-2 mt-1 text-sm text-slate-500">
+          <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
             <span>{formatFileSize(statement.file.size)}</span>
             {statement.pageCount && (
               <>
@@ -176,7 +171,7 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
             <span className={`material-icons-outlined text-lg ${status.color}`}>
               {status.icon}
             </span>
-            <span className="text-sm text-slate-600">
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
               {statement.status === 'complete'
                 ? `${statement.transactions.length} transactions found`
                 : status.label}
@@ -197,7 +192,8 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
         {/* Remove button */}
         <button
           onClick={onRemove}
-          className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+          className="p-2 transition-colors"
+          style={{ color: 'var(--text-muted)' }}
         >
           <span className="material-icons-outlined text-xl">close</span>
         </button>

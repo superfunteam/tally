@@ -9,9 +9,9 @@ interface CardProps extends HTMLMotionProps<'div'> {
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ variant = 'default', padding = 'md', className = '', children, ...props }, ref) => {
     const variantClasses = {
-      default: 'bg-white shadow-sm border border-slate-200',
-      elevated: 'bg-white shadow-md',
-      outlined: 'bg-white border-2 border-slate-200',
+      default: 'shadow-sm border',
+      elevated: 'shadow-md',
+      outlined: 'border-2',
     };
 
     const paddingClasses = {
@@ -25,6 +25,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
       <motion.div
         ref={ref}
         className={`rounded-2xl ${variantClasses[variant]} ${paddingClasses[padding]} ${className}`}
+        style={{ backgroundColor: 'var(--bg-primary)', borderColor: 'var(--border-color)' }}
         {...props}
       >
         {children}

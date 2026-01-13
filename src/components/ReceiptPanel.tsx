@@ -32,9 +32,9 @@ export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry }: Receip
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 bg-white">
-        <h2 className="text-xl font-bold text-slate-900">Receipts</h2>
-        <p className="text-sm text-slate-500 mt-1">
+      <div className="p-4 border-b" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+        <h2 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Receipts</h2>
+        <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
           {receipts.length === 0
             ? 'Upload or capture your receipts'
             : `${receipts.length} receipt${receipts.length !== 1 ? 's' : ''} uploaded`}
@@ -130,7 +130,7 @@ function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
     >
       <Card className="overflow-hidden" padding="none">
         {/* Image */}
-        <div className="relative aspect-[3/4] bg-slate-100">
+        <div className="relative aspect-[3/4]" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
           <img
             src={receipt.preview}
             alt="Receipt"
@@ -171,14 +171,14 @@ function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
         <div className="p-3">
           {receipt.status === 'complete' && receipt.transactions.length > 0 ? (
             <div className="space-y-1">
-              <p className="font-semibold text-sm text-slate-900 truncate">
+              <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                 {receipt.transactions[0].merchantName}
               </p>
-              <p className="text-lg font-bold text-slate-900">
+              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                 ${receipt.transactions[0].total.toFixed(2)}
               </p>
               {receipt.transactions.length > 1 && (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   +{receipt.transactions.length - 1} more
                 </p>
               )}
@@ -195,7 +195,7 @@ function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
               <span className={`material-icons-outlined text-lg ${status.color}`}>
                 {status.icon}
               </span>
-              <span className="text-sm text-slate-600">{status.label}</span>
+              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{status.label}</span>
             </div>
           )}
         </div>

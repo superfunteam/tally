@@ -111,15 +111,16 @@ export function DropZone({
       </AnimatePresence>
 
       <motion.span
-        className="material-icons-outlined text-5xl text-slate-400"
-        animate={isDragging ? { scale: 1.2, color: '#6366f1' } : { scale: 1 }}
+        className="material-icons-outlined text-5xl"
+        style={{ color: 'var(--text-muted)' }}
+        animate={isDragging ? { scale: 1.2, color: 'var(--color-primary-600)' } : { scale: 1 }}
       >
         {icon}
       </motion.span>
 
       <div className="text-center">
-        <p className="text-lg font-semibold text-slate-700">{title}</p>
-        <p className="text-sm text-slate-500">{subtitle}</p>
+        <p className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</p>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>
       </div>
     </motion.div>
   );
