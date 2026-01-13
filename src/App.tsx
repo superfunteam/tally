@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BottomTabs,
@@ -36,6 +36,26 @@ function App() {
   // Modal states
   const [showGuide, setShowGuide] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // First-time guide tracking
+  const [hasSeenGuide, setHasSeenGuide] = useLocalStorage<boolean>('tally-has-seen-guide', false);
+
+  // Show guide on first load
+  useEffect(() => {
+    if (!hasSeenGuide) {
+      // Small delay to let the app render first
+      const timer = setTimeout(() => setShowGuide(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [hasSeenGuide]);
+
+  // Track when user closes guide
+  const handleCloseGuide = useCallback(() => {
+    setShowGuide(false);
+    if (!hasSeenGuide) {
+      setHasSeenGuide(true);
+    }
+  }, [hasSeenGuide, setHasSeenGuide]);
 
   // Color mode
   const [colorMode, setColorMode] = useColorMode();
@@ -466,7 +486,7 @@ function App() {
       />
 
       {/* Guide Modal */}
-      <Modal isOpen={showGuide} onClose={() => setShowGuide(false)} title="How Tally Works">
+      <Modal isOpen={showGuide} onClose={handleCloseGuide} title="How Tally Works">
         <div className="space-y-4">
           <div className="flex gap-3">
             <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
