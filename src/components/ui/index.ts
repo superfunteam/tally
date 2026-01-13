@@ -9,3 +9,4 @@ export { Modal } from './Modal';
 export { ColorModePicker } from './ColorModePicker';
 export type { ColorMode } from './ColorModePicker';
 export { ScanningOverlay } from './ScanningOverlay';
+export { ReceiptDetailModal } from './ReceiptDetailModal';

@@ -8,10 +8,14 @@ export interface ReceiptTransaction {
   subtotal?: number;
   tax?: number;
   tip?: number;
+  tipHandwritten?: boolean;
+  printedTotal?: number;
+  handwrittenTotal?: number;
   total: number;
   paymentMethod?: string;
   confidence: number;
   rawText?: string;
+  edited?: boolean;
 }
 
 export interface ReceiptImage {

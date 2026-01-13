@@ -8,6 +8,9 @@ interface ReceiptTransaction {
   subtotal?: number;
   tax?: number;
   tip?: number;
+  tipHandwritten?: boolean;
+  printedTotal?: number;
+  handwrittenTotal?: number;
   total: number;
   paymentMethod?: string;
   confidence: number;
@@ -18,7 +21,7 @@ interface RequestBody {
   mimeType: string;
 }
 
-const systemPrompt = `You are an expert receipt analyzer. Your task is to extract transaction information from receipt images.
+const systemPrompt = `You are an expert receipt analyzer. Your task is to extract transaction information from receipt images with HIGH ACCURACY for amounts.
 
 IMPORTANT: A single image may contain MULTIPLE receipts. First, count how many distinct receipts are visible, then extract data from each one.
 
@@ -27,17 +30,25 @@ For each receipt found, extract:
 - date: Transaction date (format: YYYY-MM-DD)
 - time: Transaction time if visible (format: HH:MM)
 - location: Store address/location if visible
-- subtotal: Amount before tax and tip
+- subtotal: Amount before tax and tip (the printed subtotal)
 - tax: Tax amount
-- tip: Tip amount (look for handwritten tips!)
-- total: Final total amount
+- tip: Tip amount - CRITICAL: check for BOTH printed and handwritten tips!
+- tipHandwritten: true if the tip appears to be handwritten, false if printed
+- printedTotal: The PRINTED total on the receipt (before any handwritten modifications)
+- handwrittenTotal: If there's a handwritten total that differs from printed, include it here
+- total: The ACTUAL final amount (use handwrittenTotal if present and legible, otherwise printedTotal)
 - paymentMethod: Card type or cash if visible
 - confidence: Your confidence in this extraction (0.0-1.0)
 
-For handwritten tips:
-- Look for handwritten numbers on the tip line
-- Look for handwritten totals that differ from printed totals
-- Calculate tip as: handwritten total - printed total (if applicable)
+HANDWRITTEN TIP DETECTION - This is critical for accuracy:
+1. Look for handwritten numbers on the "Tip:" or "Gratuity:" line
+2. Look for handwritten totals on the "Total:" line or at the bottom
+3. Look for slashes, crossed out numbers, or corrections
+4. Handwriting typically looks different from thermal printer text
+5. If handwrittenTotal exists: tip = handwrittenTotal - printedTotal (approximately)
+6. Compare subtotal + tax + tip to verify the total makes sense
+
+VERIFICATION: Always verify that subtotal + tax + tip ≈ total. If they don't match, lower your confidence and note the discrepancy.
 
 Return a JSON object with:
 {
@@ -46,7 +57,7 @@ Return a JSON object with:
 }
 
 If you cannot read a field, omit it. Always include merchantName, date, total, and confidence.
-Be careful with decimal points and currency amounts.`;
+Be extremely careful with decimal points and currency amounts - getting the total wrong is a critical error.`;
 
 export default async (request: Request) => {
   if (request.method !== 'POST') {

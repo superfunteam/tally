@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DropZone, Card, CameraButton, Button, ScanningOverlay } from './ui';
-import type { ReceiptImage, ProcessingStatus } from '../types';
+import { DropZone, Card, CameraButton, Button, ScanningOverlay, ReceiptDetailModal } from './ui';
+import type { ReceiptImage, ReceiptTransaction, ProcessingStatus } from '../types';
 
 interface ReceiptPanelProps {
   receipts: ReceiptImage[];
   onAddFiles: (files: File[]) => void;
   onRemove: (id: string) => void;
   onRetry: (id: string) => void;
+  onUpdateTransaction: (receiptId: string, transactionIndex: number, updated: ReceiptTransaction) => void;
 }
 
 const statusConfig: Record<ProcessingStatus, { label: string; icon: string; color: string }> = {
@@ -18,7 +20,9 @@ const statusConfig: Record<ProcessingStatus, { label: string; icon: string; colo
   error: { label: 'Error', icon: 'error', color: 'text-red-500' },
 };
 
-export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry }: ReceiptPanelProps) {
+export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry, onUpdateTransaction }: ReceiptPanelProps) {
+  const [selectedReceipt, setSelectedReceipt] = useState<{ receipt: ReceiptImage; transactionIndex: number } | null>(null);
+
   const handleFiles = (files: File[]) => {
     // Filter for image files only
     const imageFiles = files.filter((file) =>
@@ -26,6 +30,18 @@ export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry }: Receip
     );
     if (imageFiles.length > 0) {
       onAddFiles(imageFiles);
+    }
+  };
+
+  const handleReceiptClick = (receipt: ReceiptImage, transactionIndex: number = 0) => {
+    if (receipt.status === 'complete' && receipt.transactions.length > 0) {
+      setSelectedReceipt({ receipt, transactionIndex });
+    }
+  };
+
+  const handleSaveTransaction = (updated: ReceiptTransaction) => {
+    if (selectedReceipt) {
+      onUpdateTransaction(selectedReceipt.receipt.id, selectedReceipt.transactionIndex, updated);
     }
   };
 
@@ -99,6 +115,7 @@ export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry }: Receip
                     receipt={receipt}
                     onRemove={() => onRemove(receipt.id)}
                     onRetry={() => onRetry(receipt.id)}
+                    onClick={() => handleReceiptClick(receipt)}
                   />
                 ))}
               </AnimatePresence>
@@ -106,6 +123,15 @@ export function ReceiptPanel({ receipts, onAddFiles, onRemove, onRetry }: Receip
           </div>
         )}
       </div>
+
+      {/* Receipt Detail Modal */}
+      <ReceiptDetailModal
+        isOpen={selectedReceipt !== null}
+        onClose={() => setSelectedReceipt(null)}
+        transaction={selectedReceipt?.receipt.transactions[selectedReceipt.transactionIndex] || null}
+        previewUrl={selectedReceipt?.receipt.preview}
+        onSave={handleSaveTransaction}
+      />
     </div>
   );
 }
@@ -114,9 +140,10 @@ interface ReceiptCardProps {
   receipt: ReceiptImage;
   onRemove: () => void;
   onRetry: () => void;
+  onClick: () => void;
 }
 
-function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
+function ReceiptCard({ receipt, onRemove, onRetry, onClick }: ReceiptCardProps) {
   const status = statusConfig[receipt.status];
   const isProcessing = ['uploading', 'analyzing', 'extracting'].includes(receipt.status);
 
@@ -161,20 +188,38 @@ function ReceiptCard({ receipt, onRemove, onRetry }: ReceiptCardProps) {
         </div>
 
         {/* Info */}
-        <div className="p-3">
+        <div
+          className={`p-3 ${receipt.status === 'complete' ? 'cursor-pointer hover:bg-black/5 transition-colors' : ''}`}
+          onClick={receipt.status === 'complete' ? onClick : undefined}
+        >
           {receipt.status === 'complete' && receipt.transactions.length > 0 ? (
             <div className="space-y-1">
-              <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                {receipt.transactions[0].merchantName}
-              </p>
-              <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
-                ${receipt.transactions[0].total.toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="font-semibold text-sm truncate flex-1" style={{ color: 'var(--text-primary)' }}>
+                  {receipt.transactions[0].merchantName}
+                </p>
+                {receipt.transactions[0].edited && (
+                  <span className="material-icons text-xs ml-1" style={{ color: 'var(--color-primary-600)' }}>edit</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
+                  ${receipt.transactions[0].total.toFixed(2)}
+                </p>
+                {receipt.transactions[0].tipHandwritten && (
+                  <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
+                    tip
+                  </span>
+                )}
+              </div>
               {receipt.transactions.length > 1 && (
                 <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   +{receipt.transactions.length - 1} more
                 </p>
               )}
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                Tap to review
+              </p>
             </div>
           ) : receipt.status === 'error' ? (
             <div className="space-y-2">

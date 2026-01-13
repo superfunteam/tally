@@ -228,6 +228,20 @@ function App() {
     [statementQueue, setStatements]
   );
 
+  const handleUpdateTransaction = useCallback(
+    (receiptId: string, transactionIndex: number, updated: ReceiptTransaction) => {
+      setReceipts((prev) =>
+        prev.map((r) => {
+          if (r.id !== receiptId) return r;
+          const newTransactions = [...r.transactions];
+          newTransactions[transactionIndex] = updated;
+          return { ...r, transactions: newTransactions };
+        })
+      );
+    },
+    [setReceipts]
+  );
+
   const handleMatch = useCallback(async () => {
     const receiptTransactions = receipts
       .filter((r) => r.status === 'complete')
@@ -373,6 +387,7 @@ function App() {
                         onAddFiles={handleAddReceipts}
                         onRemove={handleRemoveReceipt}
                         onRetry={handleRetryReceipt}
+                        onUpdateTransaction={handleUpdateTransaction}
                       />
                     </motion.div>
                   ) : (
@@ -402,6 +417,7 @@ function App() {
                     onAddFiles={handleAddReceipts}
                     onRemove={handleRemoveReceipt}
                     onRetry={handleRetryReceipt}
+                    onUpdateTransaction={handleUpdateTransaction}
                   />
                 </div>
                 <div className="w-1/2">
