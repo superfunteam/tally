@@ -34,7 +34,7 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
     }
   };
 
-  const isImageFile = (file: File) => file.type.startsWith('image/') || Boolean(file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i));
+  const isImageFile = (file?: File) => file?.type?.startsWith('image/') || Boolean(file?.name?.match(/\.(jpg|jpeg|png|heic|webp)$/i));
 
   const totalTransactions = statements.reduce(
     (sum, s) => sum + (s.transactions?.length || 0),
@@ -220,7 +220,7 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
           <p className="font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{statement.name}</p>
 
           <div className="flex items-center gap-2 mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            <span>{formatFileSize(statement.file.size)}</span>
+            {statement.file?.size && <span>{formatFileSize(statement.file.size)}</span>}
             {statement.pageCount && (
               <>
                 <span>·</span>

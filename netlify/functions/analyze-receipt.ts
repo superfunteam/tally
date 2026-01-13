@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 
 interface ReceiptTransaction {
   merchantName: string;
@@ -21,43 +21,59 @@ interface RequestBody {
   mimeType: string;
 }
 
-const systemPrompt = `You are an expert receipt analyzer. Your task is to extract transaction information from receipt images with HIGH ACCURACY for amounts.
+const systemPrompt = `You are an expert receipt analyzer with excellent OCR skills. Extract transaction information from receipt images with HIGH ACCURACY for amounts.
 
 IMPORTANT: A single image may contain MULTIPLE receipts. First, count how many distinct receipts are visible, then extract data from each one.
 
-For each receipt found, extract:
+## AMOUNT EXTRACTION PRIORITY (Most to Least Reliable)
+
+1. **PRINTED AMOUNTS** - Thermal printer text is most reliable
+   - Subtotal, Tax, Printed Total are typically accurate
+   - These are your ground truth when available
+
+2. **HANDWRITTEN AMOUNTS** - Only use when clearly legible
+   - Tips are usually handwritten
+   - Sometimes totals are handwritten (after adding tip)
+   - If handwriting is unclear/ambiguous, mark as unclear
+
+3. **CALCULATED AMOUNTS** - When handwritten is unclear
+   - If you can read subtotal, tax, and tip but NOT the handwritten total:
+     Calculate total = subtotal + tax + tip
+   - This calculated total is more reliable than guessing unclear handwriting
+
+## FOR EACH RECEIPT, EXTRACT:
 - merchantName: The store/restaurant name
 - date: Transaction date (format: YYYY-MM-DD)
 - time: Transaction time if visible (format: HH:MM)
 - location: Store address/location if visible
-- subtotal: Amount before tax and tip (the printed subtotal)
-- tax: Tax amount
-- tip: Tip amount - CRITICAL: check for BOTH printed and handwritten tips!
-- tipHandwritten: true if the tip appears to be handwritten, false if printed
-- printedTotal: The PRINTED total on the receipt (before any handwritten modifications)
-- handwrittenTotal: If there's a handwritten total that differs from printed, include it here
-- total: The ACTUAL final amount (use handwrittenTotal if present and legible, otherwise printedTotal)
+- subtotal: PRINTED subtotal (before tax and tip)
+- tax: PRINTED tax amount
+- tip: Tip amount (may be handwritten) - set to 0 if no tip line
+- tipHandwritten: true if tip is handwritten, false if printed or absent
+- printedTotal: The PRINTED total on the receipt
+- handwrittenTotal: The HANDWRITTEN total if present and clearly legible (omit if unclear)
+- total: The FINAL amount to use:
+  1. Use handwrittenTotal if clearly legible
+  2. Otherwise, CALCULATE from subtotal + tax + tip
+  3. Only use printedTotal as fallback if no tip was added
 - paymentMethod: Card type or cash if visible
 - confidence: Your confidence in this extraction (0.0-1.0)
 
-HANDWRITTEN TIP DETECTION - This is critical for accuracy:
-1. Look for handwritten numbers on the "Tip:" or "Gratuity:" line
-2. Look for handwritten totals on the "Total:" line or at the bottom
-3. Look for slashes, crossed out numbers, or corrections
-4. Handwriting typically looks different from thermal printer text
-5. If handwrittenTotal exists: tip = handwrittenTotal - printedTotal (approximately)
-6. Compare subtotal + tax + tip to verify the total makes sense
+## VERIFICATION CHECKLIST
+Before finalizing each receipt:
+1. Does subtotal + tax + tip ≈ total? If not, recheck amounts
+2. Is the tip reasonable (0-30% of subtotal)?
+3. Are all decimal points correctly placed?
+4. If math doesn't add up, lower confidence and note discrepancy
 
-VERIFICATION: Always verify that subtotal + tax + tip ≈ total. If they don't match, lower your confidence and note the discrepancy.
-
-Return a JSON object with:
+Return JSON:
 {
   "receiptCount": <number of receipts found>,
   "transactions": [<array of receipt data>]
 }
 
-If you cannot read a field, omit it. Always include merchantName, date, total, and confidence.
-Be extremely careful with decimal points and currency amounts - getting the total wrong is a critical error.`;
+If you cannot read a field clearly, omit it rather than guess.
+CRITICAL: Getting the total wrong is the worst error - when in doubt, calculate from parts.`;
 
 export default async (request: Request) => {
   if (request.method !== 'POST') {
@@ -83,51 +99,39 @@ export default async (request: Request) => {
       );
     }
 
-    const anthropic = new Anthropic();
+    // Netlify AI Gateway automatically injects credentials
+    const ai = new GoogleGenAI({});
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4096,
-      messages: [
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-image-preview',
+      contents: [
         {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: body.mimeType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
-                data: body.image,
-              },
-            },
-            {
-              type: 'text',
-              text: 'Analyze this receipt image and extract all transaction data. Remember to check for multiple receipts and handwritten tips. Return only valid JSON.',
-            },
-          ],
+          inlineData: {
+            mimeType: body.mimeType,
+            data: body.image,
+          },
         },
+        'Analyze this receipt image and extract all transaction data. Remember to check for multiple receipts and handwritten tips/totals. Prioritize printed amounts, then clearly legible handwritten amounts, and calculate totals when handwriting is unclear. Return only valid JSON.',
       ],
-      system: systemPrompt,
+      config: {
+        systemInstruction: systemPrompt,
+      },
     });
 
-    // Extract the text content from the response
-    const textContent = response.content.find(block => block.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI');
-    }
+    const text = response.text;
 
     // Parse the JSON response
     let result;
     try {
       // Try to extract JSON from the response (might be wrapped in markdown code blocks)
-      const jsonMatch = textContent.text.match(/\{[\s\S]*\}/);
+      const jsonMatch = text?.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0]);
       } else {
         throw new Error('No JSON found in response');
       }
     } catch (parseError) {
-      console.error('Failed to parse AI response:', textContent.text);
+      console.error('Failed to parse AI response:', text);
       throw new Error('Failed to parse receipt data');
     }
 

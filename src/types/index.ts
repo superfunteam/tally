@@ -20,7 +20,7 @@ export interface ReceiptTransaction {
 
 export interface ReceiptImage {
   id: string;
-  file: File;
+  file?: File; // Optional - File objects can't be serialized to localStorage
   preview: string;
   status: ProcessingStatus;
   transactions: ReceiptTransaction[];
@@ -39,7 +39,7 @@ export interface StatementTransaction {
 
 export interface StatementFile {
   id: string;
-  file: File;
+  file?: File; // Optional - File objects can't be serialized to localStorage
   name: string;
   pageCount?: number;
   status: ProcessingStatus;
