@@ -177,7 +177,7 @@ export function ReceiptDetailModal({
               <label className="text-xs font-medium mb-1 flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
                 Tip
                 {transaction.tipHandwritten && (
-                  <span className="material-icons text-xs" style={{ color: '#f59e0b' }}>edit</span>
+                  <span className="material-icons-outlined text-xs" style={{ color: '#f59e0b' }}>edit</span>
                 )}
               </label>
               <div className="relative">
@@ -233,7 +233,7 @@ export function ReceiptDetailModal({
               {transaction.handwrittenTotal && (
                 <p style={{ color: '#f59e0b' }}>
                   Handwritten total: ${transaction.handwrittenTotal.toFixed(2)}
-                  <span className="material-icons text-xs ml-1 align-middle">edit</span>
+                  <span className="material-icons-outlined text-xs ml-1 align-middle">edit</span>
                 </p>
               )}
             </div>
@@ -247,7 +247,7 @@ export function ReceiptDetailModal({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <span className="material-icons text-red-500 text-lg">warning</span>
+              <span className="material-icons-outlined text-red-500 text-lg">warning</span>
               <div className="text-sm">
                 <p className="font-medium text-red-600">Math doesn't add up</p>
                 <p style={{ color: 'var(--text-secondary)' }}>

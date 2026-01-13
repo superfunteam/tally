@@ -144,7 +144,7 @@ export function ScanningOverlay({ status }: ScanningOverlayProps) {
           }}
         >
           <motion.span
-            className="material-icons text-5xl"
+            className="material-icons-outlined text-5xl"
             animate={{
               scale: [1, 1.1, 1],
             }}

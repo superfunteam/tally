@@ -38,7 +38,8 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
           {/* Desktop Modal */}
           <div className="hidden md:flex fixed inset-0 z-50 items-center justify-center p-4 pointer-events-none">
             <motion.div
-              className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden pointer-events-auto"
+              className="rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] flex flex-col pointer-events-auto"
+              style={{ backgroundColor: 'var(--bg-primary)' }}
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -46,26 +47,28 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
               onClick={(e) => e.stopPropagation()}
             >
               {title && (
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                  <h2 className="text-lg font-semibold">{title}</h2>
+                <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: 'var(--border-color)' }}>
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
                   {showClose && (
                     <button
                       onClick={onClose}
-                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      className="p-1 transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       <span className="material-icons-outlined">close</span>
                     </button>
                   )}
                 </div>
               )}
-              <div className="p-6 overflow-y-auto">{children}</div>
+              <div className="p-6 overflow-y-auto flex-1">{children}</div>
             </motion.div>
           </div>
 
           {/* Mobile Bottom Sheet */}
           <div className="md:hidden fixed inset-0 z-50 flex items-end pointer-events-none">
             <motion.div
-              className="bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl w-full max-h-[85vh] overflow-hidden pointer-events-auto"
+              className="rounded-t-3xl shadow-2xl w-full max-h-[85vh] flex flex-col pointer-events-auto"
+              style={{ backgroundColor: 'var(--bg-primary)' }}
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -73,24 +76,25 @@ export function Modal({ isOpen, onClose, title, children, showClose = true }: Mo
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag handle */}
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full" />
+              <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+                <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--border-color)' }} />
               </div>
 
               {title && (
-                <div className="flex items-center justify-between px-6 py-2 border-b border-slate-200 dark:border-slate-700">
-                  <h2 className="text-lg font-semibold">{title}</h2>
+                <div className="flex items-center justify-between px-6 py-2 border-b flex-shrink-0" style={{ borderColor: 'var(--border-color)' }}>
+                  <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
                   {showClose && (
                     <button
                       onClick={onClose}
-                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      className="p-1 transition-colors"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       <span className="material-icons-outlined">close</span>
                     </button>
                   )}
                 </div>
               )}
-              <div className="p-6 overflow-y-auto max-h-[70vh]">{children}</div>
+              <div className="p-6 overflow-y-auto flex-1 pb-safe">{children}</div>
             </motion.div>
           </div>
         </>

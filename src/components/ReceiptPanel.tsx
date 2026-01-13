@@ -198,7 +198,7 @@ function ReceiptCard({ receipt, onRemove, onRetry, onClick }: ReceiptCardProps) 
                   {receipt.transactions[0].merchantName}
                 </p>
                 {receipt.transactions[0].edited && (
-                  <span className="material-icons text-xs ml-1" style={{ color: 'var(--color-primary-600)' }}>edit</span>
+                  <span className="material-icons-outlined text-xs ml-1" style={{ color: 'var(--color-primary-600)' }}>edit</span>
                 )}
               </div>
               <div className="flex items-center gap-2">

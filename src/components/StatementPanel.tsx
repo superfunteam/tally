@@ -188,7 +188,7 @@ function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardP
         >
           {isProcessing ? (
             <motion.span
-              className="material-icons text-2xl text-white"
+              className="material-icons-outlined text-2xl text-white"
               animate={{
                 rotateY: [0, 360],
                 scale: [1, 1.1, 1],
