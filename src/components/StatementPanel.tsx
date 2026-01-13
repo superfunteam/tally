@@ -33,7 +33,7 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
     }
   };
 
-  const isImageFile = (file: File) => file.type.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i);
+  const isImageFile = (file: File) => file.type.startsWith('image/') || Boolean(file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i));
 
   const totalTransactions = statements.reduce(
     (sum, s) => sum + (s.transactions?.length || 0),
