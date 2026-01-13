@@ -145,7 +145,6 @@ interface ReceiptCardProps {
 
 function ReceiptCard({ receipt, onRemove, onRetry, onClick }: ReceiptCardProps) {
   const status = statusConfig[receipt.status];
-  const isProcessing = ['uploading', 'analyzing', 'extracting'].includes(receipt.status);
 
   return (
     <motion.div
