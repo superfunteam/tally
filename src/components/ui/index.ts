@@ -5,3 +5,6 @@ export { BottomTabs } from './BottomTabs';
 export { FAB } from './FAB';
 export { CameraButton } from './CameraButton';
 export { ProgressRing } from './ProgressRing';
+export { Modal } from './Modal';
+export { ColorModePicker } from './ColorModePicker';
+export type { ColorMode } from './ColorModePicker';

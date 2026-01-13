@@ -5,6 +5,8 @@ import {
   FAB,
   Button,
   InstallPrompt,
+  Modal,
+  ColorModePicker,
 } from './components';
 import { ReceiptPanel } from './components/ReceiptPanel';
 import { StatementPanel } from './components/StatementPanel';
@@ -15,6 +17,7 @@ import { useApi } from './hooks/useApi';
 import { useCamera } from './hooks/useCamera';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { useColorMode } from './hooks/useColorMode';
 import type {
   TabType,
   AppView,
@@ -29,6 +32,13 @@ function App() {
   // View and tab state
   const [view, setView] = useState<AppView>('upload');
   const [activeTab, setActiveTab] = useState<TabType>('receipts');
+
+  // Modal states
+  const [showGuide, setShowGuide] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // Color mode
+  const [colorMode, setColorMode] = useColorMode();
 
   // Data state with persistence
   const [receipts, setReceipts] = useLocalStorage<ReceiptImage[]>('tally-receipts', []);
@@ -256,6 +266,7 @@ function App() {
     receiptQueue.clearQueue();
     statementQueue.clearQueue();
     setView('upload');
+    setShowClearConfirm(false);
   }, [receipts, setReceipts, setStatements, setResults, receiptQueue, statementQueue]);
 
   // Check if ready to match
@@ -269,16 +280,18 @@ function App() {
     { icon: 'photo_library', label: 'From Gallery', onClick: camera.openGallery },
   ];
 
+  const hasData = receipts.length > 0 || statements.length > 0;
+
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+      <header className="border-b px-4 py-3 flex items-center justify-between sticky top-0 z-20" style={{ backgroundColor: 'var(--header-bg)', borderColor: 'var(--border-color)' }}>
         <div>
-          <h1 className="text-xl font-bold text-primary-600">Tally</h1>
-          <p className="text-xs text-slate-500">Track if your bills match</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--color-primary-600)' }}>Tally</h1>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Track if your bills match</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {view === 'upload' && canMatch && (
             <Button
               variant="primary"
@@ -290,13 +303,24 @@ function App() {
             </Button>
           )}
 
-          {(receipts.length > 0 || statements.length > 0) && (
+          <ColorModePicker mode={colorMode} onChange={setColorMode} />
+
+          <button
+            onClick={() => setShowGuide(true)}
+            className="p-2 rounded-lg transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="Guide"
+          >
+            <span className="material-icons-outlined text-xl" style={{ color: 'var(--text-secondary)' }}>help_outline</span>
+          </button>
+
+          {hasData && (
             <button
-              onClick={handleClearAll}
-              className="p-2 text-slate-400 hover:text-slate-600"
+              onClick={() => setShowClearConfirm(true)}
+              className="p-2 rounded-lg transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
               title="Clear all"
+              style={{ color: 'var(--color-primary-600)' }}
             >
-              <span className="material-icons-outlined">delete_outline</span>
+              <span className="material-icons-outlined text-xl">delete_outline</span>
             </button>
           )}
         </div>
@@ -352,7 +376,7 @@ function App() {
 
               {/* Desktop: Split view */}
               <div className="hidden md:flex h-full">
-                <div className="w-1/2 border-r border-slate-200">
+                <div className="w-1/2 border-r" style={{ borderColor: 'var(--border-color)' }}>
                   <ReceiptPanel
                     receipts={receipts}
                     onAddFiles={handleAddReceipts}
@@ -440,6 +464,95 @@ function App() {
         onInstall={pwa.promptInstall}
         onDismiss={pwa.dismissPrompt}
       />
+
+      {/* Guide Modal */}
+      <Modal isOpen={showGuide} onClose={() => setShowGuide(false)} title="How Tally Works">
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-icons-outlined text-primary-600">lock</span>
+            </div>
+            <div>
+              <h3 className="font-semibold">100% Private</h3>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                All data stays in your browser's local storage. No accounts, no cloud uploads, no tracking.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-icons-outlined text-primary-600">auto_delete</span>
+            </div>
+            <div>
+              <h3 className="font-semibold">Use Once, Delete</h3>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                After reviewing your matches, tap the trash icon to clear everything. No data is retained.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0">
+              <span className="material-icons-outlined text-primary-600">receipt_long</span>
+            </div>
+            <div>
+              <h3 className="font-semibold">Keep Paper Receipts</h3>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Save your paper receipts all month. At month's end, snap photos and upload your statement. Done in 2 minutes!
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 mt-4" style={{ borderColor: 'var(--border-color)' }}>
+            <h4 className="font-semibold mb-2">Quick Steps:</h4>
+            <ol className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+              <li>1. Upload receipt photos (can have multiple per image)</li>
+              <li>2. Upload your PDF bank statement</li>
+              <li>3. Tap "Match" to find discrepancies</li>
+              <li>4. Review results, then clear your data</li>
+            </ol>
+          </div>
+
+          <p className="text-xs text-center pt-2" style={{ color: 'var(--text-muted)' }}>
+            Tally ho! Track if your bills match.
+          </p>
+        </div>
+      </Modal>
+
+      {/* Clear Confirmation Modal */}
+      <Modal isOpen={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Clear All Data?">
+        <div className="space-y-4">
+          <p style={{ color: 'var(--text-secondary)' }}>
+            This will permanently delete all uploaded receipts, statements, and match results from your browser.
+          </p>
+
+          <div className="p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="material-icons-outlined text-lg" style={{ color: 'var(--text-muted)' }}>info</span>
+              <span style={{ color: 'var(--text-secondary)' }}>This action cannot be undone.</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => setShowClearConfirm(false)}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              icon="delete"
+              onClick={handleClearAll}
+              className="flex-1"
+            >
+              Clear All
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

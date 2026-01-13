@@ -181,6 +181,115 @@ body {
   transform: scale(0.95);
 }
 
+/* Color Mode: Light (default) */
+:root, .light {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border-color: #e2e8f0;
+  --card-bg: #ffffff;
+  --header-bg: #ffffff;
+}
+
+/* Color Mode: Dark */
+.dark {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+  --border-color: #334155;
+  --card-bg: #1e293b;
+  --header-bg: #1e293b;
+  --color-primary-600: #818cf8;
+  --color-primary-700: #a5b4fc;
+}
+
+/* Color Mode: Sepia */
+.sepia {
+  --bg-primary: #fef3c7;
+  --bg-secondary: #fffbeb;
+  --bg-tertiary: #fde68a;
+  --text-primary: #78350f;
+  --text-secondary: #92400e;
+  --text-muted: #b45309;
+  --border-color: #fcd34d;
+  --card-bg: #fffbeb;
+  --header-bg: #fffbeb;
+  --color-primary-600: #b45309;
+  --color-primary-700: #92400e;
+}
+
+/* Color Mode: E-Ink */
+.eink {
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --border-color: #d1d5db;
+  --card-bg: #ffffff;
+  --header-bg: #ffffff;
+  --color-primary-600: #374151;
+  --color-primary-700: #1f2937;
+}
+
+/* Apply color mode variables */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.card {
+  background-color: var(--card-bg);
+  border-color: var(--border-color);
+}
+
+.tab-bar {
+  background-color: var(--header-bg);
+  border-color: var(--border-color);
+}
+
+.dark .btn-secondary {
+  background-color: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.dark .btn-secondary:hover {
+  background-color: #475569;
+}
+
+.dark .btn-ghost {
+  color: var(--text-secondary);
+}
+
+.dark .btn-ghost:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.sepia .btn-secondary {
+  background-color: #fde68a;
+  color: #78350f;
+}
+
+.sepia .btn-secondary:hover {
+  background-color: #fcd34d;
+}
+
+.eink .btn-primary {
+  background-color: #374151;
+  box-shadow: none;
+}
+
+.eink .btn-primary:hover {
+  background-color: #1f2937;
+}
+
 /* Utility styles */
 .scrollbar-hide {
   -ms-overflow-style: none;
