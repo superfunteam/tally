@@ -9,6 +9,9 @@ interface ReceiptTransaction {
   subtotal?: number;
   tax?: number;
   tip?: number;
+  tipHandwritten?: boolean;
+  printedTotal?: number;
+  handwrittenTotal?: number;
   total: number;
   paymentMethod?: string;
   confidence: number;
@@ -22,56 +25,90 @@ interface StatementTransaction {
   type: 'debit' | 'credit';
 }
 
-interface TransactionMatch {
-  receiptId: string;
-  statementId: string;
-  confidence: number;
-  status: 'confirmed' | 'discrepancy';
-  difference?: number;
-  reasoning: string;
-}
-
 interface RequestBody {
   receipts: ReceiptTransaction[];
   statements: StatementTransaction[];
 }
 
-const systemPrompt = `You are an expert at matching receipt transactions to bank/credit card statement entries.
+const systemPrompt = `You are an expert financial reconciliation assistant. Your job is to match receipt transactions against bank/credit card statement entries.
 
-Your task is to analyze two lists of transactions and find matches between receipts and statement entries.
+## YOUR MISSION
+For EACH receipt, determine if there's a matching entry in the statement. We only care about receipts - whether they match or don't match. We do NOT care about statement entries that have no receipt.
 
-Matching criteria (in order of importance):
-1. Amount matching:
-   - Exact match is ideal
-   - Consider tip variations (receipt total with tip vs statement amount)
-   - Allow small differences (< $0.10) for rounding
-2. Date matching:
-   - Same day is ideal
-   - Allow up to 3 days difference (for pending transactions)
-3. Merchant matching:
-   - Compare receipt merchant name with statement description
-   - Statement descriptions are often abbreviated or coded
+## MATCHING PRIORITY (Most Important First)
 
-For each match, provide:
-- receiptId: The ID of the matched receipt
-- statementId: The ID of the matched statement entry
-- confidence: Your confidence in this match (0.0-1.0)
-- status: "confirmed" if amounts match (within $0.10), "discrepancy" if there's a difference
-- difference: The amount difference (receipt total - statement amount), if any
-- reasoning: Brief explanation of why this is a match
+### 1. DATE IS KING
+- The transaction DATE is the PRIMARY matching criteria
+- Receipt date and statement date should match OR be within 1-3 days (banks sometimes post transactions a day or two later)
+- If dates are more than 5 days apart, it's probably NOT a match
 
-Return a JSON object:
+### 2. TIME HELPS CONFIRM
+- If the receipt has a time, use it to help distinguish between multiple transactions on the same day
+- A morning receipt (9am) shouldn't match an evening statement entry if there's a better time match
+- Statement entries don't have times, so use time to break ties when multiple receipts are on the same day
+
+### 3. AMOUNT SHOULD BE CLOSE
+- Amounts do NOT need to match exactly!
+- Tips cause differences: receipt might show $50 subtotal, but statement shows $60 (with tip)
+- If receipt has a tip field, expect statement amount ≈ subtotal + tax + tip
+- Allow reasonable differences: up to 25% for restaurant receipts (generous tips), up to $5 for other receipts
+- If receipt shows handwrittenTotal, that's likely what hit the statement
+
+### 4. MERCHANT NAME (Weak Signal)
+- Statement descriptions are often cryptic abbreviations
+- "STARBUCKS #12345 NEW YOR" might be "Starbucks Coffee"
+- Don't reject a match just because names look different
+- Use merchant name only to confirm, not to reject
+
+## MATCHING RULES
+
+1. Each receipt can match AT MOST one statement entry
+2. Each statement entry can match AT MOST one receipt
+3. It's OKAY for receipts to be unmatched (maybe paid cash, different card, etc.)
+4. It's OKAY for statements to be unmatched (we don't care about those)
+5. When in doubt about a match, mark it as a "discrepancy" rather than "confirmed"
+
+## FOR EACH RECEIPT, DETERMINE:
+
+**MATCHED - CONFIRMED**: Found a statement entry where:
+- Date matches (same day or within 3 days)
+- Amount is close (within expected tip range or $5)
+- High confidence this is the same transaction
+
+**MATCHED - DISCREPANCY**: Found a likely statement entry but:
+- Amount differs more than expected
+- Something seems off but it's probably the match
+- User should review this one
+
+**UNMATCHED**: No statement entry found that reasonably matches:
+- No entries on or near that date
+- No entries with similar amounts
+- This receipt might be from a different card, paid cash, or missing from statement
+
+## OUTPUT FORMAT
+
+Return JSON:
 {
-  "matches": [<array of matches>],
-  "unmatchedReceiptIds": [<array of receipt IDs without matches>],
-  "unmatchedStatementIds": [<array of statement IDs without matches>]
+  "matches": [
+    {
+      "receiptId": "receipt-xxx",
+      "statementId": "statement-xxx",
+      "status": "confirmed" | "discrepancy",
+      "confidence": 0.0-1.0,
+      "amountDifference": <receipt total minus statement amount>,
+      "reasoning": "Brief explanation"
+    }
+  ],
+  "unmatchedReceiptIds": ["receipt-xxx", ...]
 }
 
-Important:
-- Each receipt can only match ONE statement entry
-- Each statement entry can only match ONE receipt
-- Only create matches you're reasonably confident about (>0.6)
-- It's better to leave something unmatched than create a wrong match`;
+## IMPORTANT NOTES
+
+- Be GENEROUS with matching - if date is right and amount is ballpark, it's probably a match
+- Restaurant receipts commonly have 15-25% added for tip
+- The goal is to help users find discrepancies, not to be overly strict
+- A "discrepancy" match is better than wrongly marking something as "unmatched"
+- We trust the user uploaded the right statement for these receipts`;
 
 export default async (request: Request) => {
   if (request.method !== 'POST') {
@@ -88,7 +125,7 @@ export default async (request: Request) => {
       );
     }
 
-    if (body.receipts.length === 0 && body.statements.length === 0) {
+    if (body.receipts.length === 0) {
       return Response.json({
         success: true,
         results: {
@@ -102,21 +139,43 @@ export default async (request: Request) => {
 
     const anthropic = new Anthropic();
 
+    // Build a clear, structured prompt
+    const receiptsFormatted = body.receipts.map(r => ({
+      id: r.id,
+      merchant: r.merchantName,
+      date: r.date,
+      time: r.time || 'unknown',
+      subtotal: r.subtotal,
+      tax: r.tax,
+      tip: r.tip,
+      tipHandwritten: r.tipHandwritten,
+      total: r.total,
+      handwrittenTotal: r.handwrittenTotal,
+    }));
+
+    const statementsFormatted = body.statements.map(s => ({
+      id: s.id,
+      date: s.date,
+      description: s.description,
+      amount: s.amount,
+      type: s.type,
+    }));
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 4096,
+      max_tokens: 8192,
       messages: [
         {
           role: 'user',
-          content: `Please match these receipt transactions to statement entries.
+          content: `Match these receipts to statement entries. Remember: DATE is most important, amounts should be CLOSE but not exact (tips!).
 
-RECEIPT TRANSACTIONS:
-${JSON.stringify(body.receipts, null, 2)}
+## RECEIPTS TO MATCH (${body.receipts.length} total)
+${JSON.stringify(receiptsFormatted, null, 2)}
 
-STATEMENT TRANSACTIONS:
-${JSON.stringify(body.statements, null, 2)}
+## STATEMENT ENTRIES TO SEARCH (${body.statements.length} total)
+${JSON.stringify(statementsFormatted, null, 2)}
 
-Analyze and return matches as JSON.`,
+For each receipt, find the best matching statement entry or mark as unmatched. Return JSON only.`,
         },
       ],
       system: systemPrompt,
@@ -146,8 +205,17 @@ Analyze and return matches as JSON.`,
     const receiptMap = new Map(body.receipts.map(r => [r.id, r]));
     const statementMap = new Map(body.statements.map(s => [s.id, s]));
 
-    const confirmed: TransactionMatch[] = [];
-    const discrepancies: TransactionMatch[] = [];
+    const confirmed: Array<{
+      id: string;
+      receiptTransaction: ReceiptTransaction;
+      statementTransaction: StatementTransaction;
+      confidence: number;
+      status: string;
+      difference?: number;
+      resolved: boolean;
+    }> = [];
+
+    const discrepancies: typeof confirmed = [];
 
     for (const match of result.matches || []) {
       const receipt = receiptMap.get(match.receiptId);
@@ -160,7 +228,7 @@ Analyze and return matches as JSON.`,
           statementTransaction: statement,
           confidence: match.confidence,
           status: match.status,
-          difference: match.difference,
+          difference: match.amountDifference || (receipt.total - statement.amount),
           resolved: false,
         };
 
@@ -172,12 +240,9 @@ Analyze and return matches as JSON.`,
       }
     }
 
+    // Only get unmatched receipts - we don't care about unmatched statements
     const unmatchedReceipts = (result.unmatchedReceiptIds || [])
       .map((id: string) => receiptMap.get(id))
-      .filter(Boolean);
-
-    const unmatchedStatements = (result.unmatchedStatementIds || [])
-      .map((id: string) => statementMap.get(id))
       .filter(Boolean);
 
     return Response.json({
@@ -186,7 +251,7 @@ Analyze and return matches as JSON.`,
         confirmed,
         discrepancies,
         unmatchedReceipts,
-        unmatchedStatements,
+        unmatchedStatements: [], // We don't care about these
       },
     });
   } catch (error) {
