@@ -8,7 +8,8 @@ interface StatementTransaction {
 }
 
 interface RequestBody {
-  pdf: string; // base64 encoded PDF
+  file: string; // base64 encoded file
+  mediaType: string; // MIME type (application/pdf, image/jpeg, etc.)
 }
 
 const systemPrompt = `You are an expert at parsing bank and credit card statements. Your task is to extract ALL transactions from the statement.
@@ -48,14 +49,34 @@ export default async (request: Request) => {
   try {
     const body: RequestBody = await request.json();
 
-    if (!body.pdf) {
+    if (!body.file || !body.mediaType) {
       return Response.json(
-        { error: 'Missing PDF data' },
+        { error: 'Missing file data or media type' },
         { status: 400 }
       );
     }
 
     const anthropic = new Anthropic();
+    const isPdf = body.mediaType === 'application/pdf';
+
+    // Build content based on file type
+    const fileContent = isPdf
+      ? {
+          type: 'document' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'application/pdf' as const,
+            data: body.file,
+          },
+        }
+      : {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: body.mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: body.file,
+          },
+        };
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5-20250929',
@@ -64,14 +85,7 @@ export default async (request: Request) => {
         {
           role: 'user',
           content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: body.pdf,
-              },
-            },
+            fileContent,
             {
               type: 'text',
               text: 'Parse this bank/credit card statement and extract all transactions. Return only valid JSON with the transaction list.',

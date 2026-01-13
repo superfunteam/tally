@@ -20,14 +20,20 @@ const statusConfig: Record<ProcessingStatus, { label: string; icon: string; colo
 
 export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: StatementPanelProps) {
   const handleFiles = (files: File[]) => {
-    // Filter for PDF files only
-    const pdfFiles = files.filter(
-      (file) => file.type === 'application/pdf' || file.name.endsWith('.pdf')
+    // Filter for PDF or image files
+    const validFiles = files.filter(
+      (file) =>
+        file.type === 'application/pdf' ||
+        file.name.endsWith('.pdf') ||
+        file.type.startsWith('image/') ||
+        file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i)
     );
-    if (pdfFiles.length > 0) {
-      onAddFiles(pdfFiles);
+    if (validFiles.length > 0) {
+      onAddFiles(validFiles);
     }
   };
+
+  const isImageFile = (file: File) => file.type.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|heic|webp)$/i);
 
   const totalTransactions = statements.reduce(
     (sum, s) => sum + (s.transactions?.length || 0),
@@ -50,11 +56,11 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
       <div className="flex-1 overflow-y-auto p-4 pb-32 scrollbar-hide">
         {statements.length === 0 ? (
           <DropZone
-            accept=".pdf,application/pdf"
+            accept=".pdf,application/pdf,image/*"
             multiple
             icon="description"
-            title="Drop PDF statements here"
-            subtitle="or click to browse"
+            title="Drop statements here"
+            subtitle="PDF or image"
             onFiles={handleFiles}
           />
         ) : (
@@ -66,7 +72,7 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
               onClick={() => {
                 const input = document.createElement('input');
                 input.type = 'file';
-                input.accept = '.pdf,application/pdf';
+                input.accept = '.pdf,application/pdf,image/*';
                 input.multiple = true;
                 input.onchange = (e) => {
                   const files = Array.from((e.target as HTMLInputElement).files || []);
@@ -76,7 +82,7 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
               }}
               className="w-full"
             >
-              Add More Statements
+              Add More
             </Button>
 
             {/* Statement list */}
@@ -86,6 +92,7 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
                   <StatementCard
                     key={statement.id}
                     statement={statement}
+                    isImage={isImageFile(statement.file)}
                     onRemove={() => onRemove(statement.id)}
                     onRetry={() => onRetry(statement.id)}
                   />
@@ -101,11 +108,12 @@ export function StatementPanel({ statements, onAddFiles, onRemove, onRetry }: St
 
 interface StatementCardProps {
   statement: StatementFile;
+  isImage: boolean;
   onRemove: () => void;
   onRetry: () => void;
 }
 
-function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
+function StatementCard({ statement, isImage, onRemove, onRetry }: StatementCardProps) {
   const status = statusConfig[statement.status];
   const isProcessing = ['uploading', 'analyzing', 'extracting'].includes(statement.status);
 
@@ -124,7 +132,7 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
       transition={{ type: 'spring', damping: 20, stiffness: 300 }}
     >
       <Card className="flex items-start gap-4">
-        {/* PDF Icon */}
+        {/* File Icon */}
         <div
           className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{ backgroundColor: 'var(--bg-tertiary)' }}
@@ -147,7 +155,7 @@ function StatementCard({ statement, onRemove, onRetry }: StatementCardProps) {
                   : 'text-slate-500'
               }`}
             >
-              picture_as_pdf
+              {isImage ? 'image' : 'picture_as_pdf'}
             </span>
           )}
         </div>

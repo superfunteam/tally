@@ -53,6 +53,7 @@ export function useApi() {
   const parseStatement = useCallback(async (file: File): Promise<ParseStatementResponse> => {
     try {
       const base64 = await fileToBase64(file);
+      const mediaType = file.type || (file.name.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg');
 
       const response = await fetch('/api/parse-statement', {
         method: 'POST',
@@ -60,7 +61,8 @@ export function useApi() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          pdf: base64,
+          file: base64,
+          mediaType,
         }),
       });
 
