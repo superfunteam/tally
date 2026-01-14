@@ -143,21 +143,27 @@ function App() {
     (files: File[]) => {
       pwa.markUpload();
 
-      files.forEach((file) => {
-        const id = `receipt-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      // Create all receipts first
+      const newReceipts = files.map((file, index) => {
+        const id = `receipt-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
         const preview = URL.createObjectURL(file);
+        return { id, file, preview };
+      });
 
-        setReceipts((prev) => [
-          ...prev,
-          {
-            id,
-            file,
-            preview,
-            status: 'pending',
-            transactions: [],
-          },
-        ]);
+      // Batch add to state
+      setReceipts((prev) => [
+        ...prev,
+        ...newReceipts.map(({ id, file, preview }) => ({
+          id,
+          file,
+          preview,
+          status: 'pending' as const,
+          transactions: [],
+        })),
+      ]);
 
+      // Add all to queue
+      newReceipts.forEach(({ id, file }) => {
         receiptQueue.addToQueue(id, file);
       });
     },
@@ -168,20 +174,26 @@ function App() {
     (files: File[]) => {
       pwa.markUpload();
 
-      files.forEach((file) => {
-        const id = `statement-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      // Create all statements first
+      const newStatements = files.map((file, index) => {
+        const id = `statement-${Date.now()}-${index}-${Math.random().toString(36).slice(2)}`;
+        return { id, file, name: file.name };
+      });
 
-        setStatements((prev) => [
-          ...prev,
-          {
-            id,
-            file,
-            name: file.name,
-            status: 'pending',
-            transactions: [],
-          },
-        ]);
+      // Batch add to state
+      setStatements((prev) => [
+        ...prev,
+        ...newStatements.map(({ id, file, name }) => ({
+          id,
+          file,
+          name,
+          status: 'pending' as const,
+          transactions: [],
+        })),
+      ]);
 
+      // Add all to queue
+      newStatements.forEach(({ id, file }) => {
         statementQueue.addToQueue(id, file);
       });
     },
