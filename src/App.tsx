@@ -445,6 +445,8 @@ function App() {
                   unmatchedReceipts: [],
                   unmatchedStatements: [],
                 }}
+                receipts={receipts}
+                statements={statements}
                 onResolve={handleResolve}
                 onBack={() => setView('upload')}
                 isMatching={isMatching}
